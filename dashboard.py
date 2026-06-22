@@ -122,7 +122,7 @@ with col1:
     fig_donut = px.pie(
         values = [n_pos, n_neg],
         names  = ["Positif", "Negatif"],
-        color_discrete_sequence = ["#639922", "#E24B4A"],
+        color_discrete_sequence = ["#E24B4A", "#639922"],  
         hole   = 0.55
     )
     fig_donut.update_traces(textposition='outside', textinfo='percent+label')
