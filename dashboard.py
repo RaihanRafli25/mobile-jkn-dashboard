@@ -1,14 +1,10 @@
-# ===== dashboard.py =====
-# Deploy file ini ke Streamlit Cloud
+# ===== dashboard.py — Versi Supabase =====
 
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+from supabase import create_client
 from collections import Counter
-import json
 
 st.set_page_config(
     page_title = "Dashboard Sentimen Mobile JKN",
@@ -16,26 +12,35 @@ st.set_page_config(
     layout     = "wide"
 )
 
-# ── Load data dari Google Sheets ──────────────────────────────
-# Di Streamlit Cloud, credentials disimpan di st.secrets
-@st.cache_data(ttl=3600)   # cache 1 jam agar tidak reload terus
+# ── Koneksi Supabase ──────────────────────────────────────────
+@st.cache_data(ttl=3600)
 def load_data():
-    scope  = ["https://spreadsheets.google.com/feeds",
-              "https://www.googleapis.com/auth/drive"]
-    creds_dict = json.loads(st.secrets["GOOGLE_CREDENTIALS"])
-    creds  = ServiceAccountCredentials.from_json_keyfile_dict(
-                 creds_dict, scope)
-    client = gspread.authorize(creds)
-    sheet  = client.open("database_mobile_jkn").sheet1
-    data   = sheet.get_all_records()
-    df     = pd.DataFrame(data)
+    url = st.secrets["https://ggyhlisrwsceytyfqcgi.supabase.co"]
+    key = st.secrets["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdneWhsaXNyd3NjZXl0eWZxY2dpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMTY5NjcsImV4cCI6MjA5NzY5Mjk2N30.x2g3BVdOs5yiuFX3CSvoU6YIhUg8p3kR-zLJpRdwcX4"]
+    sb  = create_client(url, key)
+
+    # Ambil semua data dari tabel ulasan
+    all_data = []
+    page     = 0
+    while True:
+        res = sb.table('ulasan').select('*').range(
+            page * 1000, (page + 1) * 1000 - 1
+        ).execute()
+        if not res.data:
+            break
+        all_data.extend(res.data)
+        if len(res.data) < 1000:
+            break
+        page += 1
+
+    df = pd.DataFrame(all_data)
     df['tanggal'] = pd.to_datetime(df['tanggal'])
     df['bulan']   = df['tanggal'].dt.to_period('M').astype(str)
     return df
 
 # ── Header ────────────────────────────────────────────────────
 st.title("🏥 Dashboard Analisis Sentimen Mobile JKN")
-st.caption("Sumber data: Google Play Store · Model: SVM + TF-IDF")
+st.caption("Sumber data: Google Play Store · Model: LinearSVC + TF-IDF")
 st.divider()
 
 # ── Load data ─────────────────────────────────────────────────
@@ -55,21 +60,21 @@ with st.sidebar:
         ["Semua", "Positif", "Negatif"]
     )
 
-    tgl_min = df['tanggal'].min().date()
-    tgl_max = df['tanggal'].max().date()
+    tgl_min   = df['tanggal'].min().date()
+    tgl_max   = df['tanggal'].max().date()
     tgl_range = st.date_input(
         "Rentang tanggal",
-        value=(tgl_min, tgl_max),
-        min_value=tgl_min,
-        max_value=tgl_max
+        value    = (tgl_min, tgl_max),
+        min_value= tgl_min,
+        max_value= tgl_max
     )
 
     keyword = st.text_input("Cari kata kunci ulasan", "")
 
     rating_opt = st.multiselect(
         "Rating",
-        options=[1, 2, 4, 5],
-        default=[1, 2, 4, 5]
+        options = [1, 2, 4, 5],
+        default = [1, 2, 4, 5]
     )
 
     st.divider()
@@ -115,14 +120,16 @@ col1, col2 = st.columns([1, 2])
 with col1:
     st.subheader("Distribusi sentimen")
     fig_donut = px.pie(
-        values=[n_pos, n_neg],
-        names=["Positif", "Negatif"],
-        color_discrete_sequence=["#639922", "#E24B4A"],
-        hole=0.55
-    )
+    values = [n_neg, n_pos],
+    names  = ["Negatif", "Positif"],
+    color_discrete_sequence = ["#E24B4A", "#639922"],
+    hole   = 0.55
+)
     fig_donut.update_traces(textposition='outside', textinfo='percent+label')
     fig_donut.update_layout(
-        showlegend=False, margin=dict(t=0, b=0, l=0, r=0), height=280
+        showlegend = False,
+        margin     = dict(t=0, b=0, l=0, r=0),
+        height     = 280
     )
     st.plotly_chart(fig_donut, use_container_width=True)
 
@@ -132,17 +139,18 @@ with col2:
                .size().reset_index(name='jumlah'))
     fig_tren = px.bar(
         tren, x='bulan', y='jumlah', color='prediksi',
-        color_discrete_map={'positif':'#639922','negatif':'#E24B4A'},
-        barmode='group',
-        labels={'bulan':'Bulan','jumlah':'Jumlah ulasan','prediksi':'Sentimen'}
+        color_discrete_map = {'positif':'#639922','negatif':'#E24B4A'},
+        barmode = 'group',
+        labels  = {'bulan':'Bulan','jumlah':'Jumlah ulasan','prediksi':'Sentimen'}
     )
     fig_tren.update_layout(
-        margin=dict(t=0, b=0), height=280,
-        legend=dict(orientation='h', yanchor='bottom', y=1.02)
+        margin = dict(t=0, b=0),
+        height = 280,
+        legend = dict(orientation='h', yanchor='bottom', y=1.02)
     )
     st.plotly_chart(fig_tren, use_container_width=True)
 
-# ── Baris 2: Distribusi rating + Kategori keluhan ─────────────
+# ── Baris 2: Distribusi rating + Top kata ─────────────────────
 col3, col4 = st.columns(2)
 
 with col3:
@@ -154,11 +162,14 @@ with col3:
     )
     fig_rating = px.bar(
         rating_count, x='rating', y='jumlah',
-        color='warna', color_discrete_map='identity',
-        labels={'rating':'Rating','jumlah':'Jumlah ulasan'}
+        color = 'warna',
+        color_discrete_map = 'identity',
+        labels = {'rating':'Rating','jumlah':'Jumlah ulasan'}
     )
     fig_rating.update_layout(
-        showlegend=False, margin=dict(t=0, b=0), height=260
+        showlegend = False,
+        margin     = dict(t=0, b=0),
+        height     = 260
     )
     st.plotly_chart(fig_rating, use_container_width=True)
 
@@ -171,13 +182,14 @@ with col4:
         kata_df  = pd.DataFrame(top_kata, columns=['kata','frekuensi'])
         fig_kata = px.bar(
             kata_df, x='frekuensi', y='kata',
-            orientation='h',
-            color_discrete_sequence=['#E24B4A'],
-            labels={'frekuensi':'Frekuensi','kata':'Kata'}
+            orientation = 'h',
+            color_discrete_sequence = ['#E24B4A'],
+            labels = {'frekuensi':'Frekuensi','kata':'Kata'}
         )
         fig_kata.update_layout(
-            yaxis=dict(autorange='reversed'),
-            margin=dict(t=0, b=0), height=260
+            yaxis  = dict(autorange='reversed'),
+            margin = dict(t=0, b=0),
+            height = 260
         )
         st.plotly_chart(fig_kata, use_container_width=True)
     else:
