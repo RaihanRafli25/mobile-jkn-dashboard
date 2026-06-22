@@ -21,6 +21,22 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements_scraping.txt
 
+      - name: Debug secrets
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ]; then
+            echo "SUPABASE_URL kosong!"
+          else
+            echo "SUPABASE_URL terisi"
+          fi
+          if [ -z "$SUPABASE_KEY" ]; then
+            echo "SUPABASE_KEY kosong!"
+          else
+            echo "SUPABASE_KEY terisi"
+          fi
+
       - name: Jalankan scraping
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
