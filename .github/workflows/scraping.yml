@@ -2,7 +2,7 @@ name: Auto Scraping Mobile JKN
 
 on:
   schedule:
-    - cron: '0 0 1 */6 *'  # Jalan otomatis setiap 6 bulan (1 Jan & 1 Jul)
+    - cron: '0 0 1 */6 *'  # Otomatis setiap 6 bulan (1 Jan & 1 Jul)
   workflow_dispatch:         # Bisa dijalankan manual kapanpun
 
 jobs:
@@ -13,7 +13,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Setup Python
+      - name: Setup Python 3.11
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
@@ -21,13 +21,8 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements_scraping.txt
 
-      - name: Download model dari release
-        run: |
-          curl -L -o svm_best_model.pkl "${{ secrets.MODEL_URL }}"
-          curl -L -o tfidf_vectorizer.pkl "${{ secrets.TFIDF_URL }}"
-
       - name: Jalankan scraping
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: py -3.11 scraping.py
+        run: python scraping.py
