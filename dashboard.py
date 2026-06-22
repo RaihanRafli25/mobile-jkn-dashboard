@@ -15,8 +15,8 @@ st.set_page_config(
 # ── Koneksi Supabase ──────────────────────────────────────────
 @st.cache_data(ttl=3600)
 def load_data():
-    url = st.secrets["https://ggyhlisrwsceytyfqcgi.supabase.co"]
-    key = st.secrets["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdneWhsaXNyd3NjZXl0eWZxY2dpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMTY5NjcsImV4cCI6MjA5NzY5Mjk2N30.x2g3BVdOs5yiuFX3CSvoU6YIhUg8p3kR-zLJpRdwcX4"]
+    url = st.secrets["SUPABASE_URL"]
+    key = st.secrets["SUPABASE_KEY"]
     sb  = create_client(url, key)
 
     # Ambil semua data dari tabel ulasan
@@ -120,11 +120,11 @@ col1, col2 = st.columns([1, 2])
 with col1:
     st.subheader("Distribusi sentimen")
     fig_donut = px.pie(
-    values = [n_neg, n_pos],
-    names  = ["Negatif", "Positif"],
-    color_discrete_sequence = ["#E24B4A", "#639922"],
-    hole   = 0.55
-)
+        values = [n_pos, n_neg],
+        names  = ["Positif", "Negatif"],
+        color_discrete_sequence = ["#639922", "#E24B4A"],
+        hole   = 0.55
+    )
     fig_donut.update_traces(textposition='outside', textinfo='percent+label')
     fig_donut.update_layout(
         showlegend = False,
