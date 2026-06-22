@@ -1,0 +1,6 @@
+google-play-scraper
+PySastrawi
+pandas
+joblib
+scikit-learn
+supabase
