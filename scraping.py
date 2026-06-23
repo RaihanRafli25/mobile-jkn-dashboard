@@ -15,12 +15,12 @@ from Sastrawi.StopWordRemover.StopWordRemoverFactory import StopWordRemoverFacto
 from supabase import create_client
 
 # ── KONFIGURASI — sesuaikan bagian ini ────────────────────────
-SUPABASE_URL     = os.environ.get("https://ggyhlisrwsceytyfqcgi.supabase.co")   # ganti dengan URL kamu
-SUPABASE_KEY     = os.environ.get("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdneWhsaXNyd3NjZXl0eWZxY2dpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIxMTY5NjcsImV4cCI6MjA5NzY5Mjk2N30.x2g3BVdOs5yiuFX3CSvoU6YIhUg8p3kR-zLJpRdwcX4") # ganti dengan Publishable key kamu
-MODEL_PATH       = "svm_best_model.pkl"
-TFIDF_PATH       = "tfidf_vectorizer.pkl"
-APP_ID           = "app.bpjs.mobile"
-STOP_DATE        = date(2025, 6, 1)
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+MODEL_PATH   = "svm_best_model.pkl"
+TFIDF_PATH   = "tfidf_vectorizer.pkl"
+APP_ID       = "app.bpjs.mobile"
+STOP_DATE    = date(2025, 6, 1)
 # ──────────────────────────────────────────────────────────────
 
 # ── Koneksi Supabase ──────────────────────────────────────────
