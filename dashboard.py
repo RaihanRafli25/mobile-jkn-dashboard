@@ -1,10 +1,11 @@
-# ===== dashboard.py — Versi Supabase =====
+# ===== dashboard.py — Versi Supabase + Optimasi =====
 
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 from supabase import create_client
 from collections import Counter
+from datetime import datetime, timedelta
 
 st.set_page_config(
     page_title = "Dashboard Sentimen Mobile JKN",
@@ -14,16 +15,17 @@ st.set_page_config(
 
 # ── Koneksi Supabase ──────────────────────────────────────────
 @st.cache_data(ttl=3600)
-def load_data():
-    url = st.secrets["SUPABASE_URL"]
-    key = st.secrets["SUPABASE_KEY"]
+def load_data(tgl_mulai='2025-06-01'):
+    url = st.secrets["supabase"]["url"]
+    key = st.secrets["supabase"]["key"]
     sb  = create_client(url, key)
 
-    # Ambil semua data dari tabel ulasan
     all_data = []
     page     = 0
     while True:
-        res = sb.table('ulasan').select('*').range(
+        res = sb.table('ulasan').select('*').gte(
+            'tanggal', tgl_mulai
+        ).range(
             page * 1000, (page + 1) * 1000 - 1
         ).execute()
         if not res.data:
@@ -32,6 +34,9 @@ def load_data():
         if len(res.data) < 1000:
             break
         page += 1
+
+    if not all_data:
+        return pd.DataFrame()
 
     df = pd.DataFrame(all_data)
     df['tanggal'] = pd.to_datetime(df['tanggal'])
@@ -43,17 +48,36 @@ st.title("🏥 Dashboard Analisis Sentimen Mobile JKN")
 st.caption("Sumber data: Google Play Store · Model: LinearSVC + TF-IDF")
 st.divider()
 
-# ── Load data ─────────────────────────────────────────────────
-with st.spinner("Memuat data dari database..."):
-    try:
-        df = load_data()
-    except Exception as e:
-        st.error(f"Gagal memuat data: {e}")
-        st.stop()
-
 # ── Sidebar: Filter ───────────────────────────────────────────
 with st.sidebar:
     st.header("Filter Data")
+
+    # Pilihan periode load data
+    periode_opt = st.selectbox(
+        "Periode data",
+        ["6 bulan terakhir", "1 tahun terakhir", "Semua data (lambat)"]
+    )
+
+    if periode_opt == "6 bulan terakhir":
+        tgl_mulai_load = (datetime.now() - timedelta(days=180)).strftime('%Y-%m-%d')
+    elif periode_opt == "1 tahun terakhir":
+        tgl_mulai_load = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
+    else:
+        tgl_mulai_load = '2025-06-01'
+
+    # Load data berdasarkan pilihan periode
+    with st.spinner("Memuat data..."):
+        try:
+            df = load_data(tgl_mulai=tgl_mulai_load)
+        except Exception as e:
+            st.error(f"Gagal memuat data: {e}")
+            st.stop()
+
+    if df.empty:
+        st.warning("Tidak ada data untuk periode ini.")
+        st.stop()
+
+    st.divider()
 
     sentimen_opt = st.selectbox(
         "Sentimen",
@@ -64,9 +88,9 @@ with st.sidebar:
     tgl_max   = df['tanggal'].max().date()
     tgl_range = st.date_input(
         "Rentang tanggal",
-        value    = (tgl_min, tgl_max),
-        min_value= tgl_min,
-        max_value= tgl_max
+        value     = (tgl_min, tgl_max),
+        min_value = tgl_min,
+        max_value = tgl_max
     )
 
     keyword = st.text_input("Cari kata kunci ulasan", "")
@@ -78,7 +102,7 @@ with st.sidebar:
     )
 
     st.divider()
-    st.caption(f"Total data: {len(df):,} ulasan")
+    st.caption(f"Total data dimuat: {len(df):,} ulasan")
     st.caption(f"Periode: {tgl_min} s/d {tgl_max}")
 
 # ── Terapkan filter ───────────────────────────────────────────
@@ -110,7 +134,7 @@ c1, c2, c3, c4 = st.columns(4)
 c1.metric("Total ulasan",      f"{total:,}")
 c2.metric("Sentimen positif",  f"{n_pos:,}", f"{pct_pos:.1f}%")
 c3.metric("Sentimen negatif",  f"{n_neg:,}", f"{pct_neg:.1f}%")
-c4.metric("Akurasi model SVM", "90,43%", "F1-score")
+c4.metric("Akurasi model SVM", "90,43%",     "F1-score")
 
 st.divider()
 
@@ -120,9 +144,10 @@ col1, col2 = st.columns([1, 2])
 with col1:
     st.subheader("Distribusi sentimen")
     fig_donut = px.pie(
-        values = [n_pos, n_neg],
-        names  = ["Positif", "Negatif"],
-        color_discrete_sequence = ["#E24B4A", "#639922"],  
+        values = [n_neg, n_pos],
+        names  = ["Negatif", "Positif"],
+        color  = ["Negatif", "Positif"],
+        color_discrete_map = {"Negatif": "#E24B4A", "Positif": "#639922"},
         hole   = 0.55
     )
     fig_donut.update_traces(textposition='outside', textinfo='percent+label')
@@ -139,9 +164,9 @@ with col2:
                .size().reset_index(name='jumlah'))
     fig_tren = px.bar(
         tren, x='bulan', y='jumlah', color='prediksi',
-        color_discrete_map = {'positif':'#639922','negatif':'#E24B4A'},
+        color_discrete_map = {'positif':'#639922', 'negatif':'#E24B4A'},
         barmode = 'group',
-        labels  = {'bulan':'Bulan','jumlah':'Jumlah ulasan','prediksi':'Sentimen'}
+        labels  = {'bulan':'Bulan', 'jumlah':'Jumlah ulasan', 'prediksi':'Sentimen'}
     )
     fig_tren.update_layout(
         margin = dict(t=0, b=0),
@@ -164,7 +189,7 @@ with col3:
         rating_count, x='rating', y='jumlah',
         color = 'warna',
         color_discrete_map = 'identity',
-        labels = {'rating':'Rating','jumlah':'Jumlah ulasan'}
+        labels = {'rating':'Rating', 'jumlah':'Jumlah ulasan'}
     )
     fig_rating.update_layout(
         showlegend = False,
@@ -179,12 +204,12 @@ with col4:
     all_kata = ' '.join(df_neg['teks_bersih'].astype(str)).split()
     top_kata = Counter(all_kata).most_common(15)
     if top_kata:
-        kata_df  = pd.DataFrame(top_kata, columns=['kata','frekuensi'])
+        kata_df  = pd.DataFrame(top_kata, columns=['kata', 'frekuensi'])
         fig_kata = px.bar(
             kata_df, x='frekuensi', y='kata',
             orientation = 'h',
             color_discrete_sequence = ['#E24B4A'],
-            labels = {'frekuensi':'Frekuensi','kata':'Kata'}
+            labels = {'frekuensi':'Frekuensi', 'kata':'Kata'}
         )
         fig_kata.update_layout(
             yaxis  = dict(autorange='reversed'),
@@ -199,7 +224,7 @@ with col4:
 st.divider()
 st.subheader(f"Tabel ulasan ({total:,} data)")
 
-tampil_cols = ['tanggal','nama','rating','prediksi','ulasan']
+tampil_cols = ['tanggal', 'nama', 'rating', 'prediksi', 'ulasan']
 st.dataframe(
     df_f[tampil_cols].sort_values('tanggal', ascending=False),
     use_container_width = True,
