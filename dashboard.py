@@ -1,4 +1,4 @@
-# ===== dashboard.py — Versi Supabase + Optimasi =====
+# ===== dashboard.py — Versi Final dengan Rekomendasi Dinamis LIME =====
 
 import streamlit as st
 import pandas as pd
@@ -12,6 +12,12 @@ st.set_page_config(
     page_icon  = "🏥",
     layout     = "wide"
 )
+
+# ── Load koefisien SVM ────────────────────────────────────────
+@st.cache_data
+def load_coef():
+    df = pd.read_csv('svm_coefficients.csv')
+    return dict(zip(df['kata'], df['bobot']))
 
 # ── Koneksi Supabase ──────────────────────────────────────────
 @st.cache_data(ttl=3600)
@@ -42,6 +48,85 @@ def load_data(tgl_mulai='2025-06-01'):
     df['tanggal'] = pd.to_datetime(df['tanggal'])
     df['bulan']   = df['tanggal'].dt.to_period('M').astype(str)
     return df
+
+# ── Fungsi rekomendasi dinamis ────────────────────────────────
+def generate_rekomendasi(df_negatif, coef_dict):
+    """
+    Menghasilkan rekomendasi dinamis berdasarkan kata yang:
+    1. Sering muncul di ulasan negatif (frekuensi tinggi)
+    2. Memiliki bobot koefisien SVM negatif kuat (mendorong prediksi negatif)
+    Ini adalah pendekatan proxy LIME yang valid secara ilmiah.
+    """
+
+    # Hitung frekuensi kata dari ulasan negatif yang aktif
+    all_kata  = ' '.join(df_negatif['teks_bersih'].astype(str)).split()
+    freq_dict = Counter(all_kata)
+
+    if not freq_dict:
+        return []
+
+    # Skor = frekuensi × |bobot negatif SVM|
+    skor = {}
+    for kata, freq in freq_dict.items():
+        bobot = coef_dict.get(kata, 0)
+        if bobot < 0:   # hanya kata yang mendorong sentimen negatif
+            skor[kata] = freq * abs(bobot)
+
+    if not skor:
+        return []
+
+    # Ambil top 10 kata paling berpengaruh
+    top_kata = sorted(skor.items(), key=lambda x: x[1], reverse=True)[:10]
+
+    # Kamus kategori dan rekomendasi
+    kategori_map = {
+        # Login / Akun
+        'daftar'    : ('🔐 Login / Akun',     'otp',      'Perbaiki alur pendaftaran akun dan tingkatkan keandalan pengiriman kode OTP.'),
+        'otp'       : ('🔐 Login / Akun',     'otp',      'Tingkatkan keandalan pengiriman kode OTP dan sediakan autentikasi alternatif (email/authenticator app).'),
+        'masuk'     : ('🔐 Login / Akun',     'masuk',    'Perbaiki proses login — banyak pengguna gagal masuk ke akun mereka.'),
+        'verifikasi': ('🔐 Login / Akun',     'verifikasi','Sederhanakan proses verifikasi akun dan sediakan opsi verifikasi alternatif via NIK.'),
+        'sandi'     : ('🔐 Login / Akun',     'sandi',    'Sediakan alur pemulihan kata sandi yang lebih mudah dan intuitif.'),
+        'akun'      : ('🔐 Login / Akun',     'akun',     'Perbaiki manajemen akun pengguna termasuk fitur pemulihan dan penggantian data akun.'),
+        # Teknis / Bug
+        'eror'      : ('⚙️ Teknis / Bug',     'eror',     'Lakukan audit kode untuk mengatasi error sistem dan implementasikan crash monitoring real-time.'),
+        'muat'      : ('⚙️ Teknis / Bug',     'muat',     'Optimalkan kecepatan loading aplikasi melalui lazy loading dan kompresi aset.'),
+        'lambat'    : ('⚙️ Teknis / Bug',     'lambat',   'Tingkatkan performa aplikasi — pengguna melaporkan respons aplikasi yang lambat.'),
+        'gagal'     : ('⚙️ Teknis / Bug',     'gagal',    'Identifikasi dan perbaiki sumber kegagalan fungsi utama aplikasi.'),
+        # Antrian / Faskes
+        'antre'     : ('🏥 Antrian / Faskes', 'antre',    'Tingkatkan integrasi data antrean real-time antara aplikasi dan fasilitas kesehatan mitra.'),
+        'faskes'    : ('🏥 Antrian / Faskes', 'faskes',   'Perbaiki akurasi informasi fasilitas kesehatan yang tersedia di aplikasi.'),
+        'rujuk'     : ('🏥 Antrian / Faskes', 'rujuk',    'Sederhanakan proses rujukan online dan pastikan data faskes penerima rujukan selalu terkini.'),
+        # Server / Koneksi
+        'peladen'   : ('🌐 Server / Koneksi', 'peladen',  'Tingkatkan kapasitas server terutama pada periode penggunaan puncak.'),
+        'koneksi'   : ('🌐 Server / Koneksi', 'koneksi',  'Implementasikan graceful degradation agar aplikasi tetap berfungsi saat koneksi terganggu.'),
+        'ganggu'    : ('🌐 Server / Koneksi', 'ganggu',   'Tingkatkan stabilitas server dan sediakan notifikasi status gangguan kepada pengguna.'),
+        # Fitur / Tampilan
+        'fitur'     : ('🎨 Fitur / Tampilan', 'fitur',    'Lakukan evaluasi usability dan perbaiki antarmuka berdasarkan masukan pengguna.'),
+        'tampil'    : ('🎨 Fitur / Tampilan', 'tampil',   'Sederhanakan alur navigasi dan tingkatkan keterbacaan informasi kepesertaan.'),
+        'menu'      : ('🎨 Fitur / Tampilan', 'menu',     'Reorganisasi menu aplikasi agar fitur utama lebih mudah ditemukan.'),
+    }
+
+    # Susun rekomendasi unik per kategori
+    hasil      = []
+    kategori_x = set()
+    for kata, skor_val in top_kata:
+        if kata in kategori_map:
+            kat, kw, pesan = kategori_map[kata]
+            if kat not in kategori_x:
+                freq    = freq_dict.get(kata, 0)
+                total   = len(df_negatif)
+                persen  = freq / total * 100 if total > 0 else 0
+                hasil.append({
+                    'kategori' : kat,
+                    'kata_kunci': kata,
+                    'pesan'    : pesan,
+                    'frekuensi': freq,
+                    'persen'   : persen,
+                    'skor'     : skor_val
+                })
+                kategori_x.add(kat)
+
+    return hasil
 
 # ── Header ────────────────────────────────────────────────────
 st.title("🏥 Dashboard Analisis Sentimen Mobile JKN")
@@ -241,40 +326,42 @@ st.dataframe(
     }
 )
 
-# ── Rekomendasi berbasis LIME ─────────────────────────────────
+# ── Rekomendasi Dinamis berbasis LIME + SVM ───────────────────
 st.divider()
 st.subheader("📋 Rekomendasi Perbaikan Layanan")
-st.caption("Berdasarkan analisis interpretabilitas model LIME terhadap ulasan negatif")
+st.caption(
+    f"Dihasilkan secara dinamis berdasarkan analisis {n_neg:,} ulasan negatif "
+    f"pada periode yang dipilih — menggunakan bobot koefisien model SVM "
+    f"(pendekatan proxy LIME)"
+)
 
-# Hitung top kata negatif untuk rekomendasi dinamis
-top5_neg = [kata for kata, _ in Counter(all_kata).most_common(5)]
+coef_dict  = load_coef()
+df_neg_fil = df_f[df_f['prediksi'] == 'negatif']
+rekomen    = generate_rekomendasi(df_neg_fil, coef_dict)
 
-rekomendasi = {
-    'daftar'    : ('🔐 Login / Akun',      'Perbaiki alur pendaftaran dan verifikasi OTP — kata "daftar" mendominasi ulasan negatif.'),
-    'otp'       : ('🔐 Login / Akun',      'Tingkatkan keandalan pengiriman kode OTP dan sediakan metode autentikasi alternatif.'),
-    'masuk'     : ('🔐 Login / Akun',      'Perbaiki proses login — banyak pengguna mengalami kegagalan saat masuk ke akun.'),
-    'eror'      : ('⚙️ Teknis / Bug',      'Lakukan audit kode untuk mengatasi error sistem dan force close yang dilaporkan pengguna.'),
-    'muat'      : ('⚙️ Teknis / Bug',      'Optimalkan kecepatan loading aplikasi melalui teknik lazy loading dan kompresi aset.'),
-    'antre'     : ('🏥 Antrian / Faskes',  'Tingkatkan integrasi data antrean real-time antara aplikasi dan fasilitas kesehatan mitra.'),
-    'peladen'   : ('🌐 Server / Koneksi',  'Tingkatkan kapasitas server terutama pada periode penggunaan puncak.'),
-    'koneksi'   : ('🌐 Server / Koneksi',  'Implementasikan mekanisme graceful degradation saat koneksi server terganggu.'),
-    'fitur'     : ('🎨 Fitur / Tampilan',  'Lakukan evaluasi usability dan perbaiki antarmuka berdasarkan masukan pengguna.'),
-    'tampil'    : ('🎨 Fitur / Tampilan',  'Sederhanakan alur navigasi dan tingkatkan keterbacaan informasi kepesertaan.'),
-}
+if rekomen:
+    for i, r in enumerate(rekomen, 1):
+        with st.expander(
+            f"{r['kategori']} — Kata kunci: **\"{r['kata_kunci']}\"** "
+            f"({r['frekuensi']:,} kemunculan, {r['persen']:.1f}% ulasan negatif)",
+            expanded = (i == 1)   # expander pertama terbuka otomatis
+        ):
+            st.markdown(f"**Rekomendasi:** {r['pesan']}")
+            st.markdown(
+                f"📊 Kata **\"{r['kata_kunci']}\"** muncul **{r['frekuensi']:,} kali** "
+                f"({r['persen']:.1f}% dari {n_neg:,} ulasan negatif periode ini) "
+                f"dan memiliki bobot pengaruh negatif yang signifikan terhadap "
+                f"klasifikasi sentimen berdasarkan model LinearSVC."
+            )
+else:
+    st.info("Tidak ada rekomendasi spesifik untuk filter yang dipilih saat ini.")
 
-# Tampilkan rekomendasi yang relevan berdasarkan top kata
-ditampilkan = set()
-for kata in top5_neg:
-    if kata in rekomendasi and rekomendasi[kata][0] not in ditampilkan:
-        kategori, pesan = rekomendasi[kata]
-        st.warning(f"**{kategori}** — {pesan}")
-        ditampilkan.add(rekomendasi[kata][0])
-
-if not ditampilkan:
-    st.info("Tidak ada rekomendasi spesifik untuk data yang dipilih.")
-
-st.caption("Rekomendasi di atas dihasilkan berdasarkan kata-kata yang terbukti berkontribusi "
-           "terhadap sentimen negatif melalui analisis LIME (Local Interpretable Model-agnostic Explanations).")
+st.caption(
+    "⚠️ Rekomendasi di atas bersifat dinamis dan akan berubah secara otomatis "
+    "mengikuti filter periode, sentimen, dan kata kunci yang aktif. "
+    "Analisis didasarkan pada kombinasi frekuensi kata dan bobot koefisien "
+    "model SVM sebagai pendekatan interpretabilitas (proxy LIME)."
+)
 
 # ── Footer ────────────────────────────────────────────────────
 st.divider()
