@@ -49,80 +49,174 @@ def load_data(tgl_mulai='2025-06-01'):
     df['bulan']   = df['tanggal'].dt.to_period('M').astype(str)
     return df
 
-# ── Fungsi rekomendasi dinamis ────────────────────────────────
-def generate_rekomendasi(df_negatif, coef_dict):
+# ── Fungsi generate teks dinamis ─────────────────────────────
+def generate_teks_rekomendasi(kata, frekuensi, persen, total_neg, periode):
     """
-    Menghasilkan rekomendasi dinamis berdasarkan kata yang:
-    1. Sering muncul di ulasan negatif (frekuensi tinggi)
-    2. Memiliki bobot koefisien SVM negatif kuat (mendorong prediksi negatif)
-    Ini adalah pendekatan proxy LIME yang valid secara ilmiah.
+    Generate teks rekomendasi dinamis berdasarkan kata kunci,
+    angka, dan periode yang aktif.
     """
 
-    # Hitung frekuensi kata dari ulasan negatif yang aktif
+    template = {
+        # Login / Akun
+        'daftar': (
+            '🔐 Login / Akun',
+            f'Pada periode {periode}, kata **"daftar"** terdeteksi sebagai pemicu utama '
+            f'sentimen negatif dengan **{frekuensi:,} kemunculan ({persen:.1f}% ulasan negatif)**. '
+            f'Kondisi ini mengindikasikan bahwa proses pendaftaran akun masih menjadi '
+            f'hambatan utama pengguna baru. '
+            f'**Rekomendasi:** Sederhanakan alur pendaftaran, kurangi jumlah langkah verifikasi, '
+            f'dan pastikan sistem OTP berjalan stabil agar pengguna dapat menyelesaikan '
+            f'registrasi tanpa hambatan.'
+        ),
+        'otp': (
+            '🔐 Login / Akun',
+            f'Pada periode {periode}, kata **"otp"** muncul **{frekuensi:,} kali '
+            f'({persen:.1f}% ulasan negatif)** dan menjadi penyebab utama keluhan pengguna. '
+            f'Ketergantungan pada OTP berbasis SMS dinilai rentan terhadap gangguan jaringan. '
+            f'**Rekomendasi:** Evaluasi keandalan gateway SMS, sediakan OTP berbasis email '
+            f'sebagai alternatif, dan tambahkan notifikasi status pengiriman OTP yang transparan.'
+        ),
+        'masuk': (
+            '🔐 Login / Akun',
+            f'Pada periode {periode}, kata **"masuk"** terdeteksi **{frekuensi:,} kali '
+            f'({persen:.1f}% ulasan negatif)**, mengindikasikan banyak pengguna mengalami '
+            f'kegagalan saat login ke akun mereka. '
+            f'**Rekomendasi:** Perbaiki mekanisme autentikasi, tambahkan opsi login alternatif, '
+            f'dan sediakan panduan pemecahan masalah login yang mudah diakses.'
+        ),
+        'verifikasi': (
+            '🔐 Login / Akun',
+            f'Pada periode {periode}, kata **"verifikasi"** muncul **{frekuensi:,} kali '
+            f'({persen:.1f}% ulasan negatif)**. Proses verifikasi akun dinilai terlalu '
+            f'rumit oleh pengguna. '
+            f'**Rekomendasi:** Sederhanakan proses verifikasi dan sediakan opsi verifikasi '
+            f'alternatif melalui NIK atau data kepesertaan BPJS.'
+        ),
+        'sandi': (
+            '🔐 Login / Akun',
+            f'Pada periode {periode}, kata **"sandi"** muncul **{frekuensi:,} kali '
+            f'({persen:.1f}% ulasan negatif)**, menunjukkan banyak pengguna kesulitan '
+            f'mengelola kata sandi akun mereka. '
+            f'**Rekomendasi:** Sediakan alur pemulihan kata sandi yang lebih mudah dan '
+            f'intuitif, serta pertimbangkan opsi login tanpa kata sandi (passwordless).'
+        ),
+        # Teknis / Bug
+        'eror': (
+            '⚙️ Teknis / Bug',
+            f'Pada periode {periode}, kata **"eror"** terdeteksi **{frekuensi:,} kali '
+            f'({persen:.1f}% ulasan negatif)**, menandakan masalah stabilitas teknis '
+            f'yang signifikan pada aplikasi. '
+            f'**Rekomendasi:** Lakukan audit menyeluruh terhadap kode sumber, implementasikan '
+            f'sistem crash monitoring real-time (Firebase Crashlytics), dan perluas cakupan '
+            f'pengujian regresi sebelum setiap pembaruan dirilis.'
+        ),
+        'muat': (
+            '⚙️ Teknis / Bug',
+            f'Pada periode {periode}, kata **"muat"** muncul **{frekuensi:,} kali '
+            f'({persen:.1f}% ulasan negatif)**, mengindikasikan permasalahan kecepatan '
+            f'loading yang dirasakan banyak pengguna. '
+            f'**Rekomendasi:** Optimalkan ukuran dan kecepatan loading aplikasi melalui '
+            f'teknik lazy loading, kompresi aset, dan caching data yang lebih agresif.'
+        ),
+        'lambat': (
+            '⚙️ Teknis / Bug',
+            f'Pada periode {periode}, kata **"lambat"** terdeteksi **{frekuensi:,} kali '
+            f'({persen:.1f}% ulasan negatif)**. Performa aplikasi yang lambat menjadi '
+            f'keluhan yang konsisten dari pengguna. '
+            f'**Rekomendasi:** Lakukan profiling performa aplikasi untuk mengidentifikasi '
+            f'bottleneck, optimalkan query database, dan tingkatkan efisiensi rendering UI.'
+        ),
+        # Antrian / Faskes
+        'antre': (
+            '🏥 Antrian / Faskes',
+            f'Pada periode {periode}, kata **"antre"** muncul **{frekuensi:,} kali '
+            f'({persen:.1f}% ulasan negatif)**, menunjukkan ketidaksesuaian antara '
+            f'sistem antrean digital dan pelayanan aktual di fasilitas kesehatan. '
+            f'**Rekomendasi:** Tingkatkan integrasi data real-time antara aplikasi dan '
+            f'sistem informasi fasilitas kesehatan mitra, serta tambahkan notifikasi '
+            f'perkiraan waktu tunggu yang akurat.'
+        ),
+        'faskes': (
+            '🏥 Antrian / Faskes',
+            f'Pada periode {periode}, kata **"faskes"** terdeteksi **{frekuensi:,} kali '
+            f'({persen:.1f}% ulasan negatif)**. Pengguna mengalami kendala terkait '
+            f'informasi fasilitas kesehatan di aplikasi. '
+            f'**Rekomendasi:** Perbarui database fasilitas kesehatan secara berkala dan '
+            f'sediakan fitur pencarian faskes yang lebih akurat dan lengkap.'
+        ),
+        # Server / Koneksi
+        'peladen': (
+            '🌐 Server / Koneksi',
+            f'Pada periode {periode}, kata **"peladen"** muncul **{frekuensi:,} kali '
+            f'({persen:.1f}% ulasan negatif)**, mengindikasikan gangguan server yang '
+            f'dirasakan pengguna secara signifikan. '
+            f'**Rekomendasi:** Tingkatkan kapasitas infrastruktur server terutama pada '
+            f'periode penggunaan puncak, dan implementasikan load balancing yang lebih baik.'
+        ),
+        'koneksi': (
+            '🌐 Server / Koneksi',
+            f'Pada periode {periode}, kata **"koneksi"** terdeteksi **{frekuensi:,} kali '
+            f'({persen:.1f}% ulasan negatif)**. Masalah koneksi menjadi keluhan '
+            f'yang berulang dari pengguna. '
+            f'**Rekomendasi:** Implementasikan mekanisme graceful degradation agar aplikasi '
+            f'tetap dapat menampilkan informasi dasar saat koneksi server terganggu.'
+        ),
+        # Fitur / Tampilan
+        'fitur': (
+            '🎨 Fitur / Tampilan',
+            f'Pada periode {periode}, kata **"fitur"** muncul **{frekuensi:,} kali '
+            f'({persen:.1f}% ulasan negatif)**, menunjukkan ketidakpuasan pengguna '
+            f'terhadap fitur yang tersedia di aplikasi. '
+            f'**Rekomendasi:** Lakukan evaluasi usability secara berkala melalui user testing '
+            f'dan kembangkan fitur berdasarkan kebutuhan pengguna yang teridentifikasi.'
+        ),
+        'tampil': (
+            '🎨 Fitur / Tampilan',
+            f'Pada periode {periode}, kata **"tampil"** terdeteksi **{frekuensi:,} kali '
+            f'({persen:.1f}% ulasan negatif)**. Tampilan antarmuka aplikasi '
+            f'dinilai kurang memuaskan oleh pengguna. '
+            f'**Rekomendasi:** Sederhanakan alur navigasi, tingkatkan keterbacaan informasi '
+            f'kepesertaan, dan lakukan redesign UI berdasarkan prinsip UX terkini.'
+        ),
+    }
+
+    return template.get(kata, None)
+
+
+def generate_rekomendasi(df_negatif, coef_dict, periode):
     all_kata  = ' '.join(df_negatif['teks_bersih'].astype(str)).split()
     freq_dict = Counter(all_kata)
 
     if not freq_dict:
         return []
 
-    # Skor = frekuensi × |bobot negatif SVM|
     skor = {}
     for kata, freq in freq_dict.items():
         bobot = coef_dict.get(kata, 0)
-        if bobot < 0:   # hanya kata yang mendorong sentimen negatif
+        if bobot < 0:
             skor[kata] = freq * abs(bobot)
 
     if not skor:
         return []
 
-    # Ambil top 10 kata paling berpengaruh
-    top_kata = sorted(skor.items(), key=lambda x: x[1], reverse=True)[:10]
-
-    # Kamus kategori dan rekomendasi
-    kategori_map = {
-        # Login / Akun
-        'daftar'    : ('🔐 Login / Akun',     'otp',      'Perbaiki alur pendaftaran akun dan tingkatkan keandalan pengiriman kode OTP.'),
-        'otp'       : ('🔐 Login / Akun',     'otp',      'Tingkatkan keandalan pengiriman kode OTP dan sediakan autentikasi alternatif (email/authenticator app).'),
-        'masuk'     : ('🔐 Login / Akun',     'masuk',    'Perbaiki proses login — banyak pengguna gagal masuk ke akun mereka.'),
-        'verifikasi': ('🔐 Login / Akun',     'verifikasi','Sederhanakan proses verifikasi akun dan sediakan opsi verifikasi alternatif via NIK.'),
-        'sandi'     : ('🔐 Login / Akun',     'sandi',    'Sediakan alur pemulihan kata sandi yang lebih mudah dan intuitif.'),
-        'akun'      : ('🔐 Login / Akun',     'akun',     'Perbaiki manajemen akun pengguna termasuk fitur pemulihan dan penggantian data akun.'),
-        # Teknis / Bug
-        'eror'      : ('⚙️ Teknis / Bug',     'eror',     'Lakukan audit kode untuk mengatasi error sistem dan implementasikan crash monitoring real-time.'),
-        'muat'      : ('⚙️ Teknis / Bug',     'muat',     'Optimalkan kecepatan loading aplikasi melalui lazy loading dan kompresi aset.'),
-        'lambat'    : ('⚙️ Teknis / Bug',     'lambat',   'Tingkatkan performa aplikasi — pengguna melaporkan respons aplikasi yang lambat.'),
-        'gagal'     : ('⚙️ Teknis / Bug',     'gagal',    'Identifikasi dan perbaiki sumber kegagalan fungsi utama aplikasi.'),
-        # Antrian / Faskes
-        'antre'     : ('🏥 Antrian / Faskes', 'antre',    'Tingkatkan integrasi data antrean real-time antara aplikasi dan fasilitas kesehatan mitra.'),
-        'faskes'    : ('🏥 Antrian / Faskes', 'faskes',   'Perbaiki akurasi informasi fasilitas kesehatan yang tersedia di aplikasi.'),
-        'rujuk'     : ('🏥 Antrian / Faskes', 'rujuk',    'Sederhanakan proses rujukan online dan pastikan data faskes penerima rujukan selalu terkini.'),
-        # Server / Koneksi
-        'peladen'   : ('🌐 Server / Koneksi', 'peladen',  'Tingkatkan kapasitas server terutama pada periode penggunaan puncak.'),
-        'koneksi'   : ('🌐 Server / Koneksi', 'koneksi',  'Implementasikan graceful degradation agar aplikasi tetap berfungsi saat koneksi terganggu.'),
-        'ganggu'    : ('🌐 Server / Koneksi', 'ganggu',   'Tingkatkan stabilitas server dan sediakan notifikasi status gangguan kepada pengguna.'),
-        # Fitur / Tampilan
-        'fitur'     : ('🎨 Fitur / Tampilan', 'fitur',    'Lakukan evaluasi usability dan perbaiki antarmuka berdasarkan masukan pengguna.'),
-        'tampil'    : ('🎨 Fitur / Tampilan', 'tampil',   'Sederhanakan alur navigasi dan tingkatkan keterbacaan informasi kepesertaan.'),
-        'menu'      : ('🎨 Fitur / Tampilan', 'menu',     'Reorganisasi menu aplikasi agar fitur utama lebih mudah ditemukan.'),
-    }
-
-    # Susun rekomendasi unik per kategori
+    top_kata   = sorted(skor.items(), key=lambda x: x[1], reverse=True)[:15]
     hasil      = []
     kategori_x = set()
+    total      = len(df_negatif)
+
     for kata, skor_val in top_kata:
-        if kata in kategori_map:
-            kat, kw, pesan = kategori_map[kata]
+        freq   = freq_dict.get(kata, 0)
+        persen = freq / total * 100 if total > 0 else 0
+        result = generate_teks_rekomendasi(kata, freq, persen, total, periode)
+        if result:
+            kat, teks = result
             if kat not in kategori_x:
-                freq    = freq_dict.get(kata, 0)
-                total   = len(df_negatif)
-                persen  = freq / total * 100 if total > 0 else 0
                 hasil.append({
-                    'kategori' : kat,
+                    'kategori'  : kat,
                     'kata_kunci': kata,
-                    'pesan'    : pesan,
-                    'frekuensi': freq,
-                    'persen'   : persen,
-                    'skor'     : skor_val
+                    'teks'      : teks,
+                    'frekuensi' : freq,
+                    'persen'    : persen,
                 })
                 kategori_x.add(kat)
 
@@ -329,44 +423,35 @@ st.dataframe(
 # ── Rekomendasi Dinamis berbasis LIME + SVM ───────────────────
 st.divider()
 st.subheader("📋 Rekomendasi Perbaikan Layanan")
+
+# Tentukan label periode yang aktif
+if len(tgl_range) == 2:
+    periode_label = f"{tgl_range[0].strftime('%d %b %Y')} – {tgl_range[1].strftime('%d %b %Y')}"
+else:
+    periode_label = "periode yang dipilih"
+
 st.caption(
-    f"Dihasilkan secara dinamis berdasarkan analisis {n_neg:,} ulasan negatif "
-    f"pada periode yang dipilih — menggunakan bobot koefisien model SVM "
-    f"(pendekatan proxy LIME)"
+    f"Dihasilkan secara dinamis berdasarkan **{n_neg:,} ulasan negatif** "
+    f"pada periode **{periode_label}** — "
+    f"menggunakan bobot koefisien model SVM (pendekatan proxy LIME)"
 )
 
 coef_dict  = load_coef()
 df_neg_fil = df_f[df_f['prediksi'] == 'negatif']
-rekomen    = generate_rekomendasi(df_neg_fil, coef_dict)
+rekomen    = generate_rekomendasi(df_neg_fil, coef_dict, periode_label)
 
 if rekomen:
     for i, r in enumerate(rekomen, 1):
         with st.expander(
             f"{r['kategori']} — Kata kunci: **\"{r['kata_kunci']}\"** "
-            f"({r['frekuensi']:,} kemunculan, {r['persen']:.1f}% ulasan negatif)",
-            expanded = (i == 1)   # expander pertama terbuka otomatis
+            f"({r['frekuensi']:,} kemunculan · {r['persen']:.1f}% ulasan negatif)",
+            expanded = (i == 1)
         ):
-            st.markdown(f"**Rekomendasi:** {r['pesan']}")
-            st.markdown(
-                f"📊 Kata **\"{r['kata_kunci']}\"** muncul **{r['frekuensi']:,} kali** "
-                f"({r['persen']:.1f}% dari {n_neg:,} ulasan negatif periode ini) "
-                f"dan memiliki bobot pengaruh negatif yang signifikan terhadap "
-                f"klasifikasi sentimen berdasarkan model LinearSVC."
-            )
+            st.markdown(r['teks'])
 else:
     st.info("Tidak ada rekomendasi spesifik untuk filter yang dipilih saat ini.")
 
 st.caption(
-    "⚠️ Rekomendasi di atas bersifat dinamis dan akan berubah secara otomatis "
-    "mengikuti filter periode, sentimen, dan kata kunci yang aktif. "
-    "Analisis didasarkan pada kombinasi frekuensi kata dan bobot koefisien "
-    "model SVM sebagai pendekatan interpretabilitas (proxy LIME)."
-)
-
-# ── Footer ────────────────────────────────────────────────────
-st.divider()
-st.caption(
-    "Dashboard Analisis Sentimen Ulasan Mobile JKN · "
-    "Universitas Widyatama 2026 · "
-    "Model: LinearSVC + TF-IDF · XAI: LIME (F1-score: 90.43%)"
+    "⚠️ Rekomendasi di atas bersifat dinamis dan berubah otomatis "
+    "mengikuti filter periode, sentimen, dan kata kunci yang aktif."
 )
