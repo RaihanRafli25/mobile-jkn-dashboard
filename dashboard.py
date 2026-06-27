@@ -8,9 +8,9 @@ from collections import Counter
 from datetime import datetime, timedelta
 
 st.set_page_config(
-    page_title = "Dashboard Sentimen Mobile JKN",
-    page_icon  = "🏥",
-    layout     = "wide"
+    page_title="Dashboard Sentimen Mobile JKN",
+    page_icon="🏥",
+    layout="wide"
 )
 
 # ── Load koefisien SVM ────────────────────────────────────────
@@ -21,7 +21,7 @@ def load_coef():
 
 # ── Koneksi Supabase ──────────────────────────────────────────
 @st.cache_data(ttl=3600)
-def load_data(tgl_mulai='2025-06-01'):
+def load_data(tgl_mulai='2024-01-01'):
     url = st.secrets["supabase"]["url"]
     key = st.secrets["supabase"]["key"]
     sb  = create_client(url, key)
@@ -51,13 +51,7 @@ def load_data(tgl_mulai='2025-06-01'):
 
 # ── Fungsi generate teks dinamis ─────────────────────────────
 def generate_teks_rekomendasi(kata, frekuensi, persen, total_neg, periode):
-    """
-    Generate teks rekomendasi dinamis berdasarkan kata kunci,
-    angka, dan periode yang aktif.
-    """
-
     template = {
-        # Login / Akun
         'daftar': (
             '🔐 Login / Akun',
             f'Pada periode {periode}, kata **"daftar"** terdeteksi sebagai pemicu utama '
@@ -100,7 +94,6 @@ def generate_teks_rekomendasi(kata, frekuensi, persen, total_neg, periode):
             f'**Rekomendasi:** Sediakan alur pemulihan kata sandi yang lebih mudah dan '
             f'intuitif, serta pertimbangkan opsi login tanpa kata sandi (passwordless).'
         ),
-        # Teknis / Bug
         'eror': (
             '⚙️ Teknis / Bug',
             f'Pada periode {periode}, kata **"eror"** terdeteksi **{frekuensi:,} kali '
@@ -126,7 +119,6 @@ def generate_teks_rekomendasi(kata, frekuensi, persen, total_neg, periode):
             f'**Rekomendasi:** Lakukan profiling performa aplikasi untuk mengidentifikasi '
             f'bottleneck, optimalkan query database, dan tingkatkan efisiensi rendering UI.'
         ),
-        # Antrian / Faskes
         'antre': (
             '🏥 Antrian / Faskes',
             f'Pada periode {periode}, kata **"antre"** muncul **{frekuensi:,} kali '
@@ -144,7 +136,6 @@ def generate_teks_rekomendasi(kata, frekuensi, persen, total_neg, periode):
             f'**Rekomendasi:** Perbarui database fasilitas kesehatan secara berkala dan '
             f'sediakan fitur pencarian faskes yang lebih akurat dan lengkap.'
         ),
-        # Server / Koneksi
         'peladen': (
             '🌐 Server / Koneksi',
             f'Pada periode {periode}, kata **"peladen"** muncul **{frekuensi:,} kali '
@@ -161,7 +152,6 @@ def generate_teks_rekomendasi(kata, frekuensi, persen, total_neg, periode):
             f'**Rekomendasi:** Implementasikan mekanisme graceful degradation agar aplikasi '
             f'tetap dapat menampilkan informasi dasar saat koneksi server terganggu.'
         ),
-        # Fitur / Tampilan
         'fitur': (
             '🎨 Fitur / Tampilan',
             f'Pada periode {periode}, kata **"fitur"** muncul **{frekuensi:,} kali '
@@ -178,9 +168,6 @@ def generate_teks_rekomendasi(kata, frekuensi, persen, total_neg, periode):
             f'**Rekomendasi:** Sederhanakan alur navigasi, tingkatkan keterbacaan informasi '
             f'kepesertaan, dan lakukan redesign UI berdasarkan prinsip UX terkini.'
         ),
-
-        # Tambahkan ke dalam dict template yang sudah ada:
-
         'nomor': (
             '🔐 Login / Akun',
             f'Pada periode {periode}, kata **"nomor"** muncul **{frekuensi:,} kali '
@@ -255,7 +242,7 @@ def generate_teks_rekomendasi(kata, frekuensi, persen, total_neg, periode):
             f'**Rekomendasi:** Pastikan setiap pembaruan aplikasi melalui pengujian '
             f'menyeluruh sebelum dirilis dan sediakan catatan pembaruan yang jelas '
             f'agar pengguna memahami perubahan yang dilakukan.'
-        ), 
+        ),
     }
 
     return template.get(kata, None)
@@ -300,6 +287,7 @@ def generate_rekomendasi(df_negatif, coef_dict, periode):
 
     return hasil
 
+
 # ── Header ────────────────────────────────────────────────────
 st.title("🏥 Dashboard Analisis Sentimen Mobile JKN")
 st.caption("Sumber data: Google Play Store · Model: LinearSVC + TF-IDF · XAI: LIME")
@@ -311,15 +299,17 @@ with st.sidebar:
 
     periode_opt = st.selectbox(
         "Periode data",
-        ["6 bulan terakhir", "1 tahun terakhir", "Semua data (lambat)"]
+        ["6 bulan terakhir", "1 tahun terakhir", "Semua data"]
     )
 
+    # FIX: tanggal mulai load disesuaikan dari hari ini ke belakang
+    today = datetime.now()
     if periode_opt == "6 bulan terakhir":
-        tgl_mulai_load = (datetime.now() - timedelta(days=180)).strftime('%Y-%m-%d')
+        tgl_mulai_load = (today - timedelta(days=180)).strftime('%Y-%m-%d')
     elif periode_opt == "1 tahun terakhir":
-        tgl_mulai_load = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
+        tgl_mulai_load = (today - timedelta(days=365)).strftime('%Y-%m-%d')
     else:
-        tgl_mulai_load = '2025-06-01'
+        tgl_mulai_load = '2024-01-01'
 
     with st.spinner("Memuat data..."):
         try:
@@ -339,26 +329,30 @@ with st.sidebar:
         ["Semua", "Positif", "Negatif"]
     )
 
-    tgl_min   = df['tanggal'].min().date()
-    tgl_max   = df['tanggal'].max().date()
+    tgl_min = df['tanggal'].min().date()
+    tgl_max = df['tanggal'].max().date()
+
+    # FIX: pakai list bukan tuple, dan tambah key biar state stabil
     tgl_range = st.date_input(
         "Rentang tanggal",
-        value     = (tgl_min, tgl_max),
-        min_value = tgl_min,
-        max_value = tgl_max
+        value=[tgl_min, tgl_max],
+        min_value=tgl_min,
+        max_value=tgl_max,
+        key="tgl_range"
     )
 
     keyword = st.text_input("Cari kata kunci ulasan", "")
 
     rating_opt = st.multiselect(
         "Rating",
-        options = [1, 2, 4, 5],
-        default = [1, 2, 4, 5]
+        options=[1, 2, 4, 5],
+        default=[1, 2, 4, 5]
     )
 
     st.divider()
     st.caption(f"Total data dimuat: {len(df):,} ulasan")
     st.caption(f"Periode: {tgl_min} s/d {tgl_max}")
+
 
 # ── Terapkan filter ───────────────────────────────────────────
 df_f = df.copy()
@@ -366,17 +360,24 @@ df_f = df.copy()
 if sentimen_opt != "Semua":
     df_f = df_f[df_f['prediksi'] == sentimen_opt.lower()]
 
-if len(tgl_range) == 2:
-    df_f = df_f[
-        (df_f['tanggal'].dt.date >= tgl_range[0]) &
-        (df_f['tanggal'].dt.date <= tgl_range[1])
-    ]
+# FIX: handle date_input yang bisa return 1 atau 2 elemen saat user lagi milih
+if isinstance(tgl_range, (list, tuple)) and len(tgl_range) == 2:
+    tgl_start, tgl_end = tgl_range[0], tgl_range[1]
+else:
+    tgl_start = tgl_range[0] if isinstance(tgl_range, (list, tuple)) else tgl_range
+    tgl_end   = tgl_start
+
+df_f = df_f[
+    (df_f['tanggal'].dt.date >= tgl_start) &
+    (df_f['tanggal'].dt.date <= tgl_end)
+]
 
 if keyword:
     df_f = df_f[df_f['ulasan'].str.contains(keyword, case=False, na=False)]
 
 if rating_opt:
     df_f = df_f[df_f['rating'].isin(rating_opt)]
+
 
 # ── Metric cards ──────────────────────────────────────────────
 total   = len(df_f)
@@ -399,22 +400,22 @@ col1, col2 = st.columns([1, 2])
 with col1:
     st.subheader("Distribusi Sentimen")
     fig_donut = px.pie(
-        values = [n_neg, n_pos],
-        names  = ["Negatif", "Positif"],
-        color  = ["Negatif", "Positif"],
-        color_discrete_map = {"Negatif": "#E24B4A", "Positif": "#639922"},
-        hole   = 0.55
+        values=[n_neg, n_pos],
+        names=["Negatif", "Positif"],
+        color=["Negatif", "Positif"],
+        color_discrete_map={"Negatif": "#E24B4A", "Positif": "#639922"},
+        hole=0.55
     )
     fig_donut.update_traces(
-        textposition          = 'inside',
-        textinfo              = 'percent+label',
-        insidetextorientation = 'radial'
+        textposition='inside',
+        textinfo='percent+label',
+        insidetextorientation='radial'
     )
     fig_donut.update_layout(
-        showlegend = True,
-        legend     = dict(orientation='h', yanchor='bottom', y=-0.2),
-        margin     = dict(t=20, b=40, l=0, r=0),
-        height     = 320
+        showlegend=True,
+        legend=dict(orientation='h', yanchor='bottom', y=-0.2),
+        margin=dict(t=20, b=40, l=0, r=0),
+        height=320
     )
     st.plotly_chart(fig_donut, use_container_width=True)
 
@@ -424,14 +425,14 @@ with col2:
                .size().reset_index(name='jumlah'))
     fig_tren = px.bar(
         tren, x='bulan', y='jumlah', color='prediksi',
-        color_discrete_map = {'positif':'#639922', 'negatif':'#E24B4A'},
-        barmode = 'group',
-        labels  = {'bulan':'Bulan', 'jumlah':'Jumlah Ulasan', 'prediksi':'Sentimen'}
+        color_discrete_map={'positif': '#639922', 'negatif': '#E24B4A'},
+        barmode='group',
+        labels={'bulan': 'Bulan', 'jumlah': 'Jumlah Ulasan', 'prediksi': 'Sentimen'}
     )
     fig_tren.update_layout(
-        margin = dict(t=0, b=0),
-        height = 320,
-        legend = dict(orientation='h', yanchor='bottom', y=1.02)
+        margin=dict(t=0, b=0),
+        height=320,
+        legend=dict(orientation='h', yanchor='bottom', y=1.02)
     )
     st.plotly_chart(fig_tren, use_container_width=True)
 
@@ -447,14 +448,14 @@ with col3:
     )
     fig_rating = px.bar(
         rating_count, x='rating', y='jumlah',
-        color = 'warna',
-        color_discrete_map = 'identity',
-        labels = {'rating':'Rating', 'jumlah':'Jumlah Ulasan'}
+        color='warna',
+        color_discrete_map='identity',
+        labels={'rating': 'Rating', 'jumlah': 'Jumlah Ulasan'}
     )
     fig_rating.update_layout(
-        showlegend = False,
-        margin     = dict(t=0, b=0),
-        height     = 280
+        showlegend=False,
+        margin=dict(t=0, b=0),
+        height=280
     )
     st.plotly_chart(fig_rating, use_container_width=True)
 
@@ -467,14 +468,14 @@ with col4:
         kata_df  = pd.DataFrame(top_kata, columns=['kata', 'frekuensi'])
         fig_kata = px.bar(
             kata_df, x='frekuensi', y='kata',
-            orientation = 'h',
-            color_discrete_sequence = ['#E24B4A'],
-            labels = {'frekuensi':'Frekuensi', 'kata':'Kata'}
+            orientation='h',
+            color_discrete_sequence=['#E24B4A'],
+            labels={'frekuensi': 'Frekuensi', 'kata': 'Kata'}
         )
         fig_kata.update_layout(
-            yaxis  = dict(autorange='reversed'),
-            margin = dict(t=0, b=0),
-            height = 280
+            yaxis=dict(autorange='reversed'),
+            margin=dict(t=0, b=0),
+            height=280
         )
         st.plotly_chart(fig_kata, use_container_width=True)
     else:
@@ -487,14 +488,14 @@ st.subheader(f"Tabel Ulasan ({total:,} data)")
 tampil_cols = ['tanggal', 'nama', 'rating', 'prediksi', 'ulasan']
 st.dataframe(
     df_f[tampil_cols].sort_values('tanggal', ascending=False),
-    use_container_width = True,
-    height              = 400,
-    column_config       = {
-        'tanggal'  : st.column_config.DateColumn("Tanggal"),
-        'nama'     : st.column_config.TextColumn("Pengguna"),
-        'rating'   : st.column_config.NumberColumn("Rating", format="%d ⭐"),
-        'prediksi' : st.column_config.TextColumn("Sentimen"),
-        'ulasan'   : st.column_config.TextColumn("Isi Ulasan", width="large"),
+    use_container_width=True,
+    height=400,
+    column_config={
+        'tanggal' : st.column_config.DateColumn("Tanggal"),
+        'nama'    : st.column_config.TextColumn("Pengguna"),
+        'rating'  : st.column_config.NumberColumn("Rating", format="%d ⭐"),
+        'prediksi': st.column_config.TextColumn("Sentimen"),
+        'ulasan'  : st.column_config.TextColumn("Isi Ulasan", width="large"),
     }
 )
 
@@ -502,11 +503,8 @@ st.dataframe(
 st.divider()
 st.subheader("📋 Rekomendasi Perbaikan Layanan")
 
-# Tentukan label periode yang aktif
-if len(tgl_range) == 2:
-    periode_label = f"{tgl_range[0].strftime('%d %b %Y')} – {tgl_range[1].strftime('%d %b %Y')}"
-else:
-    periode_label = "periode yang dipilih"
+# FIX: pakai tgl_start / tgl_end yang sudah aman
+periode_label = f"{tgl_start.strftime('%d %b %Y')} – {tgl_end.strftime('%d %b %Y')}"
 
 st.caption(
     f"Dihasilkan secara dinamis berdasarkan **{n_neg:,} ulasan negatif** "
@@ -523,7 +521,7 @@ if rekomen:
         with st.expander(
             f"{r['kategori']} — Kata kunci: **\"{r['kata_kunci']}\"** "
             f"({r['frekuensi']:,} kemunculan · {r['persen']:.1f}% ulasan negatif)",
-            expanded = (i == 1)
+            expanded=(i == 1)
         ):
             st.markdown(r['teks'])
 else:
