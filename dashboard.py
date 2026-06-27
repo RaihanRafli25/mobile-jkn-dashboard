@@ -178,6 +178,84 @@ def generate_teks_rekomendasi(kata, frekuensi, persen, total_neg, periode):
             f'**Rekomendasi:** Sederhanakan alur navigasi, tingkatkan keterbacaan informasi '
             f'kepesertaan, dan lakukan redesign UI berdasarkan prinsip UX terkini.'
         ),
+
+        # Tambahkan ke dalam dict template yang sudah ada:
+
+        'nomor': (
+            '🔐 Login / Akun',
+            f'Pada periode {periode}, kata **"nomor"** muncul **{frekuensi:,} kali '
+            f'({persen:.1f}% ulasan negatif)**, menunjukkan permasalahan terkait '
+            f'verifikasi nomor telepon yang digunakan untuk autentikasi akun. '
+            f'**Rekomendasi:** Perbaiki sistem validasi nomor telepon dan sediakan '
+            f'opsi penggantian nomor yang terdaftar melalui verifikasi data kepesertaan BPJS.'
+        ),
+        'susah': (
+            '⚙️ Teknis / Bug',
+            f'Pada periode {periode}, kata **"susah"** terdeteksi **{frekuensi:,} kali '
+            f'({persen:.1f}% ulasan negatif)**, mengindikasikan pengalaman pengguna '
+            f'yang menyulitkan secara umum pada berbagai fitur aplikasi. '
+            f'**Rekomendasi:** Lakukan user testing menyeluruh untuk mengidentifikasi '
+            f'titik-titik kesulitan utama dan sederhanakan alur penggunaan fitur kritis.'
+        ),
+        'ribet': (
+            '🎨 Fitur / Tampilan',
+            f'Pada periode {periode}, kata **"ribet"** muncul **{frekuensi:,} kali '
+            f'({persen:.1f}% ulasan negatif)**, menunjukkan bahwa pengguna merasa '
+            f'alur penggunaan aplikasi terlalu rumit. '
+            f'**Rekomendasi:** Sederhanakan alur navigasi, kurangi jumlah langkah '
+            f'untuk menyelesaikan tugas utama, dan redesign UI mengikuti prinsip UX modern.'
+        ),
+        'rujuk': (
+            '🏥 Antrian / Faskes',
+            f'Pada periode {periode}, kata **"rujuk"** terdeteksi **{frekuensi:,} kali '
+            f'({persen:.1f}% ulasan negatif)**. Proses rujukan online dinilai '
+            f'tidak berjalan sesuai harapan pengguna. '
+            f'**Rekomendasi:** Sederhanakan proses pengajuan rujukan online dan pastikan '
+            f'data faskes penerima rujukan selalu diperbarui secara berkala.'
+        ),
+        'dokter': (
+            '🏥 Antrian / Faskes',
+            f'Pada periode {periode}, kata **"dokter"** muncul **{frekuensi:,} kali '
+            f'({persen:.1f}% ulasan negatif)**, mengindikasikan keluhan terkait '
+            f'informasi atau ketersediaan dokter di fasilitas kesehatan mitra. '
+            f'**Rekomendasi:** Perbarui informasi ketersediaan dokter secara real-time '
+            f'dan sediakan fitur pemilihan dokter yang lebih transparan di aplikasi.'
+        ),
+        'turun': (
+            '🌐 Server / Koneksi',
+            f'Pada periode {periode}, kata **"turun"** terdeteksi **{frekuensi:,} kali '
+            f'({persen:.1f}% ulasan negatif)**, menunjukkan laporan server down '
+            f'yang dirasakan pengguna. '
+            f'**Rekomendasi:** Tingkatkan keandalan infrastruktur server, implementasikan '
+            f'monitoring uptime otomatis, dan sediakan halaman status layanan yang '
+            f'dapat diakses pengguna saat terjadi gangguan.'
+        ),
+        'ganggu': (
+            '🌐 Server / Koneksi',
+            f'Pada periode {periode}, kata **"ganggu"** muncul **{frekuensi:,} kali '
+            f'({persen:.1f}% ulasan negatif)**, mengindikasikan gangguan layanan '
+            f'yang dirasakan pengguna secara berulang. '
+            f'**Rekomendasi:** Implementasikan sistem notifikasi gangguan proaktif '
+            f'kepada pengguna dan tingkatkan prosedur pemulihan layanan yang lebih cepat.'
+        ),
+        'notifikasi': (
+            '🎨 Fitur / Tampilan',
+            f'Pada periode {periode}, kata **"notifikasi"** terdeteksi **{frekuensi:,} kali '
+            f'({persen:.1f}% ulasan negatif)**, menunjukkan permasalahan pada '
+            f'sistem notifikasi aplikasi yang tidak berfungsi optimal. '
+            f'**Rekomendasi:** Perbaiki sistem push notification, berikan opsi '
+            f'pengaturan notifikasi yang fleksibel, dan pastikan notifikasi penting '
+            f'tersampaikan tepat waktu.'
+        ),
+        'pembaruan': (
+            '🎨 Fitur / Tampilan',
+            f'Pada periode {periode}, kata **"pembaruan"** muncul **{frekuensi:,} kali '
+            f'({persen:.1f}% ulasan negatif)**, mengindikasikan ketidakpuasan '
+            f'pengguna terhadap pembaruan aplikasi yang dirilis. '
+            f'**Rekomendasi:** Pastikan setiap pembaruan aplikasi melalui pengujian '
+            f'menyeluruh sebelum dirilis dan sediakan catatan pembaruan yang jelas '
+            f'agar pengguna memahami perubahan yang dilakukan.'
+        ), 
     }
 
     return template.get(kata, None)
