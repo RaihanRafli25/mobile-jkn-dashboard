@@ -137,24 +137,30 @@ c3.metric("Sentimen negatif",  f"{n_neg:,}", f"{pct_neg:.1f}%")
 c4.metric("Akurasi model SVM", "90,43%",     "F1-score")
 
 st.divider()
-
 # ── Baris 1: Donut + Tren bulanan ─────────────────────────────
 col1, col2 = st.columns([1, 2])
 
 with col1:
     st.subheader("Distribusi sentimen")
-   fig_donut = px.pie(
-    values = [n_neg, n_pos],
-    names  = ["Negatif", "Positif"],
-    color  = ["Negatif", "Positif"],
-    color_discrete_map = {"Negatif": "#E24B4A", "Positif": "#639922"},
-    hole   = 0.55
-)
-fig_donut.update_traces(
-    textposition = 'inside',
-    textinfo     = 'percent+label',
-    insidetextorientation = 'radial'
-)
+    fig_donut = px.pie(
+        values = [n_neg, n_pos],
+        names  = ["Negatif", "Positif"],
+        color  = ["Negatif", "Positif"],
+        color_discrete_map = {"Negatif": "#E24B4A", "Positif": "#639922"},
+        hole   = 0.55
+    )
+    fig_donut.update_traces(
+        textposition = 'inside',
+        textinfo     = 'percent+label',
+        insidetextorientation = 'radial'
+    )
+    fig_donut.update_layout(
+        showlegend = True,
+        legend     = dict(orientation='h', yanchor='bottom', y=-0.2),
+        margin     = dict(t=20, b=40, l=0, r=0),
+        height     = 320
+    )
+    st.plotly_chart(fig_donut, use_container_width=True)
 fig_donut.update_layout(
     showlegend = True,
     legend     = dict(orientation='h', yanchor='bottom', y=-0.2),
