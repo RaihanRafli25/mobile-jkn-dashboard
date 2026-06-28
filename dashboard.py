@@ -313,7 +313,7 @@ st.divider()
 col1, col2 = st.columns([1, 2])
 
 with col1:
-    st.subheader("Distribusi Sentimen")
+    st.subheader("Distribusi Sentimen Donut Chart")
     fig_donut = px.pie(
         values=[n_neg, n_pos],
         names=["Negatif", "Positif"],
