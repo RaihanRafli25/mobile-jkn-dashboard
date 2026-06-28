@@ -52,123 +52,7 @@ def load_data(tgl_mulai='2024-01-01'):
 # ── Fungsi generate teks dinamis ─────────────────────────────
 def generate_teks_rekomendasi(kata, frekuensi, persen, total_neg, periode):
     template = {
-        'daftar': (
-            '🔐 Login / Akun',
-            f'Pada periode {periode}, kata **"daftar"** terdeteksi sebagai pemicu utama '
-            f'sentimen negatif dengan **{frekuensi:,} kemunculan ({persen:.1f}% ulasan negatif)**. '
-            f'Kondisi ini mengindikasikan bahwa proses pendaftaran akun masih menjadi '
-            f'hambatan utama pengguna baru. '
-            f'**Rekomendasi:** Sederhanakan alur pendaftaran, kurangi jumlah langkah verifikasi, '
-            f'dan pastikan sistem OTP berjalan stabil agar pengguna dapat menyelesaikan '
-            f'registrasi tanpa hambatan.'
-        ),
-        'otp': (
-            '🔐 Login / Akun',
-            f'Pada periode {periode}, kata **"otp"** muncul **{frekuensi:,} kali '
-            f'({persen:.1f}% ulasan negatif)** dan menjadi penyebab utama keluhan pengguna. '
-            f'Ketergantungan pada OTP berbasis SMS dinilai rentan terhadap gangguan jaringan. '
-            f'**Rekomendasi:** Evaluasi keandalan gateway SMS, sediakan OTP berbasis email '
-            f'sebagai alternatif, dan tambahkan notifikasi status pengiriman OTP yang transparan.'
-        ),
-        'masuk': (
-            '🔐 Login / Akun',
-            f'Pada periode {periode}, kata **"masuk"** terdeteksi **{frekuensi:,} kali '
-            f'({persen:.1f}% ulasan negatif)**, mengindikasikan banyak pengguna mengalami '
-            f'kegagalan saat login ke akun mereka. '
-            f'**Rekomendasi:** Perbaiki mekanisme autentikasi, tambahkan opsi login alternatif, '
-            f'dan sediakan panduan pemecahan masalah login yang mudah diakses.'
-        ),
-        'verifikasi': (
-            '🔐 Login / Akun',
-            f'Pada periode {periode}, kata **"verifikasi"** muncul **{frekuensi:,} kali '
-            f'({persen:.1f}% ulasan negatif)**. Proses verifikasi akun dinilai terlalu '
-            f'rumit oleh pengguna. '
-            f'**Rekomendasi:** Sederhanakan proses verifikasi dan sediakan opsi verifikasi '
-            f'alternatif melalui NIK atau data kepesertaan BPJS.'
-        ),
-        'sandi': (
-            '🔐 Login / Akun',
-            f'Pada periode {periode}, kata **"sandi"** muncul **{frekuensi:,} kali '
-            f'({persen:.1f}% ulasan negatif)**, menunjukkan banyak pengguna kesulitan '
-            f'mengelola kata sandi akun mereka. '
-            f'**Rekomendasi:** Sediakan alur pemulihan kata sandi yang lebih mudah dan '
-            f'intuitif, serta pertimbangkan opsi login tanpa kata sandi (passwordless).'
-        ),
-        'eror': (
-            '⚙️ Teknis / Bug',
-            f'Pada periode {periode}, kata **"eror"** terdeteksi **{frekuensi:,} kali '
-            f'({persen:.1f}% ulasan negatif)**, menandakan masalah stabilitas teknis '
-            f'yang signifikan pada aplikasi. '
-            f'**Rekomendasi:** Lakukan audit menyeluruh terhadap kode sumber, implementasikan '
-            f'sistem crash monitoring real-time (Firebase Crashlytics), dan perluas cakupan '
-            f'pengujian regresi sebelum setiap pembaruan dirilis.'
-        ),
-        'muat': (
-            '⚙️ Teknis / Bug',
-            f'Pada periode {periode}, kata **"muat"** muncul **{frekuensi:,} kali '
-            f'({persen:.1f}% ulasan negatif)**, mengindikasikan permasalahan kecepatan '
-            f'loading yang dirasakan banyak pengguna. '
-            f'**Rekomendasi:** Optimalkan ukuran dan kecepatan loading aplikasi melalui '
-            f'teknik lazy loading, kompresi aset, dan caching data yang lebih agresif.'
-        ),
-        'lambat': (
-            '⚙️ Teknis / Bug',
-            f'Pada periode {periode}, kata **"lambat"** terdeteksi **{frekuensi:,} kali '
-            f'({persen:.1f}% ulasan negatif)**. Performa aplikasi yang lambat menjadi '
-            f'keluhan yang konsisten dari pengguna. '
-            f'**Rekomendasi:** Lakukan profiling performa aplikasi untuk mengidentifikasi '
-            f'bottleneck, optimalkan query database, dan tingkatkan efisiensi rendering UI.'
-        ),
-        'antre': (
-            '🏥 Antrian / Faskes',
-            f'Pada periode {periode}, kata **"antre"** muncul **{frekuensi:,} kali '
-            f'({persen:.1f}% ulasan negatif)**, menunjukkan ketidaksesuaian antara '
-            f'sistem antrean digital dan pelayanan aktual di fasilitas kesehatan. '
-            f'**Rekomendasi:** Tingkatkan integrasi data real-time antara aplikasi dan '
-            f'sistem informasi fasilitas kesehatan mitra, serta tambahkan notifikasi '
-            f'perkiraan waktu tunggu yang akurat.'
-        ),
-        'faskes': (
-            '🏥 Antrian / Faskes',
-            f'Pada periode {periode}, kata **"faskes"** terdeteksi **{frekuensi:,} kali '
-            f'({persen:.1f}% ulasan negatif)**. Pengguna mengalami kendala terkait '
-            f'informasi fasilitas kesehatan di aplikasi. '
-            f'**Rekomendasi:** Perbarui database fasilitas kesehatan secara berkala dan '
-            f'sediakan fitur pencarian faskes yang lebih akurat dan lengkap.'
-        ),
-        'peladen': (
-            '🌐 Server / Koneksi',
-            f'Pada periode {periode}, kata **"peladen"** muncul **{frekuensi:,} kali '
-            f'({persen:.1f}% ulasan negatif)**, mengindikasikan gangguan server yang '
-            f'dirasakan pengguna secara signifikan. '
-            f'**Rekomendasi:** Tingkatkan kapasitas infrastruktur server terutama pada '
-            f'periode penggunaan puncak, dan implementasikan load balancing yang lebih baik.'
-        ),
-        'koneksi': (
-            '🌐 Server / Koneksi',
-            f'Pada periode {periode}, kata **"koneksi"** terdeteksi **{frekuensi:,} kali '
-            f'({persen:.1f}% ulasan negatif)**. Masalah koneksi menjadi keluhan '
-            f'yang berulang dari pengguna. '
-            f'**Rekomendasi:** Implementasikan mekanisme graceful degradation agar aplikasi '
-            f'tetap dapat menampilkan informasi dasar saat koneksi server terganggu.'
-        ),
-        'fitur': (
-            '🎨 Fitur / Tampilan',
-            f'Pada periode {periode}, kata **"fitur"** muncul **{frekuensi:,} kali '
-            f'({persen:.1f}% ulasan negatif)**, menunjukkan ketidakpuasan pengguna '
-            f'terhadap fitur yang tersedia di aplikasi. '
-            f'**Rekomendasi:** Lakukan evaluasi usability secara berkala melalui user testing '
-            f'dan kembangkan fitur berdasarkan kebutuhan pengguna yang teridentifikasi.'
-        ),
-        'tampil': (
-            '🎨 Fitur / Tampilan',
-            f'Pada periode {periode}, kata **"tampil"** terdeteksi **{frekuensi:,} kali '
-            f'({persen:.1f}% ulasan negatif)**. Tampilan antarmuka aplikasi '
-            f'dinilai kurang memuaskan oleh pengguna. '
-            f'**Rekomendasi:** Sederhanakan alur navigasi, tingkatkan keterbacaan informasi '
-            f'kepesertaan, dan lakukan redesign UI berdasarkan prinsip UX terkini.'
-        ),
-        'nomor': (
+'nomor': (
             '🔐 Login / Akun',
             f'Pada periode {periode}, kata **"nomor"** muncul **{frekuensi:,} kali '
             f'({persen:.1f}% ulasan negatif)**, menunjukkan permasalahan terkait '
@@ -208,6 +92,14 @@ def generate_teks_rekomendasi(kata, frekuensi, persen, total_neg, periode):
             f'**Rekomendasi:** Perbarui informasi ketersediaan dokter secara real-time '
             f'dan sediakan fitur pemilihan dokter yang lebih transparan di aplikasi.'
         ),
+        'antrean': (
+            '🏥 Antrian / Faskes',
+            f'Pada periode {periode}, kata **"antrean"** terdeteksi **{frekuensi:,} kali '
+            f'({persen:.1f}% ulasan negatif)**, menunjukkan ketidaksesuaian antara '
+            f'sistem antrean digital dan pelayanan aktual di fasilitas kesehatan. '
+            f'**Rekomendasi:** Tingkatkan integrasi data antrean real-time antara aplikasi '
+            f'dan sistem informasi fasilitas kesehatan mitra.'
+        ),
         'turun': (
             '🌐 Server / Koneksi',
             f'Pada periode {periode}, kata **"turun"** terdeteksi **{frekuensi:,} kali '
@@ -240,8 +132,31 @@ def generate_teks_rekomendasi(kata, frekuensi, persen, total_neg, periode):
             f'({persen:.1f}% ulasan negatif)**, mengindikasikan ketidakpuasan '
             f'pengguna terhadap pembaruan aplikasi yang dirilis. '
             f'**Rekomendasi:** Pastikan setiap pembaruan aplikasi melalui pengujian '
-            f'menyeluruh sebelum dirilis dan sediakan catatan pembaruan yang jelas '
-            f'agar pengguna memahami perubahan yang dilakukan.'
+            f'menyeluruh sebelum dirilis dan sediakan catatan pembaruan yang jelas.'
+        ),
+        'nik': (
+            '🔐 Login / Akun',
+            f'Pada periode {periode}, kata **"nik"** muncul **{frekuensi:,} kali '
+            f'({persen:.1f}% ulasan negatif)**, menunjukkan permasalahan terkait '
+            f'verifikasi NIK dalam proses pendaftaran atau pemulihan akun. '
+            f'**Rekomendasi:** Perbaiki sistem validasi NIK dan sinkronisasi data '
+            f'kepesertaan BPJS agar proses verifikasi identitas berjalan lebih lancar.'
+        ),
+        'sms': (
+            '🔐 Login / Akun',
+            f'Pada periode {periode}, kata **"sms"** terdeteksi **{frekuensi:,} kali '
+            f'({persen:.1f}% ulasan negatif)**, mengindikasikan kegagalan '
+            f'pengiriman SMS OTP yang dikeluhkan banyak pengguna. '
+            f'**Rekomendasi:** Evaluasi dan ganti gateway SMS yang tidak andal, '
+            f'tambahkan mekanisme retry otomatis, dan sediakan OTP alternatif via email.'
+        ),
+        'kirim': (
+            '🔐 Login / Akun',
+            f'Pada periode {periode}, kata **"kirim"** muncul **{frekuensi:,} kali '
+            f'({persen:.1f}% ulasan negatif)**, menunjukkan kegagalan pengiriman '
+            f'kode verifikasi yang dirasakan pengguna. '
+            f'**Rekomendasi:** Tingkatkan keandalan sistem pengiriman kode verifikasi '
+            f'dan tambahkan konfirmasi status pengiriman yang transparan kepada pengguna.'
         ),
     }
 
