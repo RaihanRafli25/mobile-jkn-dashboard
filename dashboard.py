@@ -5,7 +5,7 @@ import pandas as pd
 import plotly.express as px
 from supabase import create_client
 from collections import Counter
-from datetime import datetime, timedelta
+
 
 st.set_page_config(
     page_title="Dashboard Sentimen Mobile JKN",
@@ -218,13 +218,12 @@ with st.sidebar:
     )
 
     # FIX: tanggal mulai load disesuaikan dari hari ini ke belakang
-    today = datetime.now()
     if periode_opt == "6 bulan terakhir":
-        tgl_mulai_load = (today - timedelta(days=180)).strftime('%Y-%m-%d')
+        tgl_mulai_load = '2025-01-01'
     elif periode_opt == "1 tahun terakhir":
-        tgl_mulai_load = (today - timedelta(days=365)).strftime('%Y-%m-%d')
+        tgl_mulai_load = '2024-07-01'
     else:
-        tgl_mulai_load = '2024-01-01'
+        tgl_mulai_load = '2025-06-01'
 
     with st.spinner("Memuat data..."):
         try:
